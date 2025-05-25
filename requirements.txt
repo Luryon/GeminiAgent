@@ -1,6 +1,7 @@
 fastapi
 uvicorn[standard] # Incluye websockets y http-tools
 openai
+jinja2
 langgraph
 langchain-openai
 langchain
