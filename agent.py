@@ -45,7 +45,7 @@ refl_excel_tool = Tool.from_function(
 def get_agent():
     """Crea y configura el agente LangGraph."""
     logger.info("Creando el agente LangGraph con Python REFL para Excel...")
-    llm = ChatOpenAI(model="o4-mini", temperature=0, openai_api_key=api_key)
+    llm = ChatOpenAI(model="o3-mini", temperature=0, openai_api_key=api_key)
     tools = [refl_excel_tool]
 
     agent_executor = chat_agent_executor.create_tool_calling_executor(llm, tools)
