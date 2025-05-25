@@ -6,7 +6,8 @@ from langgraph.prebuilt import chat_agent_executor
 from langchain_core.messages import SystemMessage
 
 # REFL
-from langchain.tools.python.tool import PythonREPLTool
+# from langchain_community.tools.refl import PythonREPLTool # ¡Elimina o comenta esta línea!
+from langchain_experimental.tools.python.tool import PythonREPLTool # ¡Usa esta en su lugar!
 from langchain_core.tools import Tool
 
 # Configuración de Logging
