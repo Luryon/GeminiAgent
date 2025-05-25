@@ -1,11 +1,13 @@
 import os
-import pandas as pd
 import logging
 from langchain_openai import ChatOpenAI
 from langchain.tools import tool
-# CAMBIO: Importamos chat_agent_executor en lugar de create_agent_executor
 from langgraph.prebuilt import chat_agent_executor
 from langchain_core.messages import SystemMessage
+
+# REFL
+from langchain_community.tools.refl import PythonREPLTool
+from langchain_core.tools import Tool
 
 # Configuración de Logging
 logging.basicConfig(level=logging.INFO)
@@ -16,53 +18,36 @@ api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     raise ValueError("La variable de entorno OPENAI_API_KEY no está configurada.")
 
-# --- Herramienta de Excel (Sin cambios) ---
-@tool
-def query_excel(question: str, file_path: str = "datos.xlsx") -> str:
-    """
-    Responde preguntas específicas sobre un archivo Excel llamado 'datos.xlsx'.
-    Úsala cuando la pregunta se refiera a datos tabulares, filas, columnas,
-    cálculos o información contenida en el archivo Excel.
-    Por ejemplo: '¿Cuántas filas hay en el excel?', '¿Cuáles son las columnas?',
-    '¿Cuál es el valor promedio de la columna X?'.
-    """
-    logger.info(f"Usando herramienta Excel para: {question}")
-    try:
-        df = pd.read_excel(file_path)
+# --- Herramienta REFL para manipular Excel ---
+# Se provee contexto inicial como sugerencia para que el agente trabaje con Excel
+context_code = """
+import pandas as pd
 
-        q_lower = question.lower()
-        if "cuántas filas" in q_lower or "numero de filas" in q_lower:
-            return f"El archivo Excel '{file_path}' tiene {len(df)} filas."
-        elif "columnas" in q_lower:
-            return f"Las columnas en '{file_path}' son: {', '.join(df.columns.tolist())}."
-        elif "mostrar datos" in q_lower or "primeras filas" in q_lower:
-            return f"Las primeras 5 filas son:\n{df.head().to_string()}"
-        else:
-            return f"No pude interpretar tu pregunta específica sobre el Excel con las reglas actuales. El archivo tiene las columnas: {df.columns.tolist()}"
+# Cargar el archivo Excel
+df = pd.read_excel('datos.xlsx')
+"""
 
-    except FileNotFoundError:
-        logger.error(f"Archivo no encontrado: {file_path}")
-        return f"Error: El archivo '{file_path}' no fue encontrado. Asegúrate de que exista."
-    except Exception as e:
-        logger.error(f"Error procesando Excel: {e}")
-        return f"Ocurrió un error al procesar el archivo Excel: {e}"
+refl_tool = PythonREPLTool(
+    name="python_refl_excel",
+    description="Usa esta herramienta para leer, analizar, modificar y guardar archivos Excel usando Python. El archivo se llama 'datos.xlsx'.",
+    context=context_code,
+)
+
+# Envolvemos en Tool si hace falta estandarizar el tipo
+refl_excel_tool = Tool.from_function(
+    func=refl_tool.run,
+    name="ManipuladorExcel",
+    description=refl_tool.description
+)
 
 # --- Creación del Agente LangGraph ---
 def get_agent():
     """Crea y configura el agente LangGraph."""
-    logger.info("Creando el agente LangGraph...")
-    llm = ChatOpenAI(model="gpt-4o", temperature=0, openai_api_key=api_key)
-    tools = [query_excel]
+    logger.info("Creando el agente LangGraph con Python REFL para Excel...")
+    llm = ChatOpenAI(model="o4-mini", temperature=0, openai_api_key=api_key)
+    tools = [refl_excel_tool]
 
-    # CAMBIO: Usamos chat_agent_executor.
-    # Nota: chat_agent_executor es más simple. Generalmente no se le pasa
-    # un SystemMessage directamente ni las keys. La forma de pasar el
-    # SystemMessage dependería de cómo chat_agent_executor lo maneje internamente
-    # o si se necesita construir el grafo manualmente para más control.
-    # Por ahora, confiamos en que el LLM y las descripciones de las tools
-    # funcionen bien. Si necesitas un SystemMessage persistente, podrías
-    # necesitar un enfoque de StateGraph más detallado.
     agent_executor = chat_agent_executor.create_tool_calling_executor(llm, tools)
 
-    logger.info("Agente LangGraph creado exitosamente.")
+    logger.info("Agente LangGraph creado exitosamente con REFL.")
     return agent_executor
