@@ -5,6 +5,7 @@ jinja2
 langgraph
 langchain-openai
 langchain-community
+langchain-experimental
 langchain
 pandas
 openpyxl
