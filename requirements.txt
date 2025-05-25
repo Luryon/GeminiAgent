@@ -4,6 +4,7 @@ openai
 jinja2
 langgraph
 langchain-openai
+langchain-community
 langchain
 pandas
 openpyxl
